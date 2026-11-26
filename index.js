@@ -629,11 +629,10 @@ const adapter = new (class ICQQAdapter {
       send(
         `[${id}] 请选择滑动验证方式\n` +
           `Bot 与浏览器处于同一网络下推荐网页，否则网页反代\n` +
-          (bot.useNTLogin ? `本协议需 ticket 与 randStr 成对，网页方式会自动带上\n` : "") +
           `\n网页反代验证：${getTips}网页反代\n` +
           `网页验证：${getTips}网页\n` +
           `请求码验证：${getTips}请求码\n` +
-          `手动验证：${getTips}ticket${bot.useNTLogin ? "（发送 ticket 或 ticket,randStr）" : ""}\n` +
+          `手动验证：${getTips}ticket\n` +
           data.url,
       )
       const msg = await get()
