@@ -764,20 +764,17 @@ const adapter = new (class ICQQAdapter {
     })
 
     bot.on("internal.deviceCheck", async url => {
+      // 验证结果没有推送通道；为避免短时间内反复发起登录被判“登录操作频繁”，
+      // 不再自动轮询，改由你在完成验证后发指令触发一次登录
       send(
         `[${id}] 需要新设备验证\n` +
-          `请用登录QQ(2131437729)的手机QQ打开：\n${url}\n` +
-          `确认完成后会自动重试登录`,
+          `请用登录QQ(${id})的手机QQ打开：\n${url}\n` +
+          `确认完成后${getTips}继续登录`,
       )
-      for (let i = 0; i < 100; i++) {
-        await Bot.sleep(3000)
-        const go = await fs
-          .readFile(path.resolve("./ticket.txt"), "utf8")
-          .then(t => t.trim())
-          .catch(() => "")
-        if (go) {
-          await fs.unlink(path.resolve("./ticket.txt")).catch(() => {})
-          return bot.login(id, password)
+      for (;;) {
+        if ((await get()) === "继续登录") {
+          bot.login(id, password)
+          break
         }
       }
     })
@@ -911,6 +908,7 @@ const adapter = new (class ICQQAdapter {
     })
 
     let online = false
+    let reloginCount = 0
     bot.on("system.offline", data => {
       const i = Bot.uin.indexOf(id)
       if (i !== -1) Bot.uin.splice(i, 1)
@@ -918,8 +916,17 @@ const adapter = new (class ICQQAdapter {
       const msg = `[${id}] 账号下线：${data.message}\n`
       if (online) {
         online = false
-        send(`${msg}正在尝试重新登录`)
-        setTimeout(() => bot.login(), 5000)
+        const delays = [30, 60, 300]
+        const delay = delays[reloginCount]
+        reloginCount++
+        if (delay) {
+          send(`${msg}${delay}秒后尝试重新登录（第${reloginCount}次）`)
+          setTimeout(() => bot.login(), delay * 1000)
+        } else {
+          send(
+            `${msg}连续掉线次数过多，已停止自动重登，确认风控解除后发送 #Bot上线${id} 重新登录`,
+          )
+        }
       } else {
         send(`${msg}发送 #Bot上线${id} 重新登录`)
       }
@@ -928,6 +935,7 @@ const adapter = new (class ICQQAdapter {
       Bot.em("system.online", data)
       bot.logger = log
       online = true
+      reloginCount = 0
       bot.__ntSliderRetry = 0
       if (sendMsg) send(`[${id}] 登录完成`)
       Bot.em(`connect.${id}`, { self_id: id })
