@@ -625,6 +625,7 @@ const adapter = new (class ICQQAdapter {
 
     bot.on("system.login.slider", async data => {
       Bot.em("system.login.slider", data)
+      const gen = (bot.__sliderGen = (bot.__sliderGen || 0) + 1)
       const fnc = {}
       send(
         `[${id}] 请选择滑动验证方式\n` +
@@ -635,7 +636,9 @@ const adapter = new (class ICQQAdapter {
           `手动验证：${getTips}ticket\n` +
           data.url,
       )
-      const msg = await get()
+      const msg = await Promise.race([get(), Bot.sleep(300000).then(() => null)])
+      if (gen !== bot.__sliderGen) return
+      if (msg === null) return send(`[${id}] 选择验证方式超时，发送 #Bot上线${id} 重新登录`)
       switch (msg) {
         case "网页反代": {
           const url = `https://GT.928100.xyz/captcha/slider?key=${id}`
@@ -764,13 +767,17 @@ const adapter = new (class ICQQAdapter {
     })
 
     bot.on("internal.deviceCheck", async url => {
+      const gen = (bot.__deviceCheckGen = (bot.__deviceCheckGen || 0) + 1)
       send(
         `[${id}] 需要新设备验证\n` +
           `请用登录QQ(${id})的手机QQ打开：\n${url}\n` +
           `确认完成后${getTips}继续登录`,
       )
       for (;;) {
-        if ((await get()) === "继续登录") {
+        const msg = await Promise.race([get(), Bot.sleep(600000).then(() => null)])
+        if (gen !== bot.__deviceCheckGen) return
+        if (msg === null) return send(`[${id}] 新设备验证等待超时，发送 #Bot上线${id} 重新登录`)
+        if (msg === "继续登录") {
           bot.login(id, password)
           break
         }
