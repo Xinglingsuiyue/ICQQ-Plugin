@@ -764,8 +764,6 @@ const adapter = new (class ICQQAdapter {
     })
 
     bot.on("internal.deviceCheck", async url => {
-      // 验证结果没有推送通道；为避免短时间内反复发起登录被判“登录操作频繁”，
-      // 不再自动轮询，改由你在完成验证后发指令触发一次登录
       send(
         `[${id}] 需要新设备验证\n` +
           `请用登录QQ(${id})的手机QQ打开：\n${url}\n` +
